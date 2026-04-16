@@ -79,6 +79,40 @@
   var cart = [];
   var currentCat = 'all';
 
+  // ─── SUPABASE LOADER ──────────────────────────────────
+  var SUPABASE_LOADED = false;
+  async function loadProducts() {
+    if (!CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes('TON-PROJET')) return;
+    try {
+      var res = await fetch(CONFIG.SUPABASE_URL + '/rest/v1/products?select=*&order=id', {
+        headers: {
+          'apikey': CONFIG.SUPABASE_ANON,
+          'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON
+        }
+      });
+      var data = await res.json();
+      if (data && data.length) {
+        PRODUCTS = data.map(function(p) {
+          return {
+            id: p.id, name: p.name, price: p.price_cents / 100,
+            cat: p.category || 'sci-fi',
+            img: 'images/' + p.slug + '.png',
+            badge: p.is_featured ? 'Nouveau' : null,
+            pieces: p.piece_count || 1,
+            scale: p.scale || '28mm',
+            sup: p.has_support || false,
+            desc: p.description || '',
+            details: p.details || []
+          };
+        });
+        SUPABASE_LOADED = true;
+        renderProducts();
+      }
+    } catch(e) {
+      console.warn('Supabase indisponible, données statiques utilisées', e);
+    }
+  }
+
   // ─── CATEGORIES ───────────────────────────────────────
   function renderCats() {
     var html = '';
@@ -630,4 +664,5 @@
   renderProducts();
   updateCart();
   renderFaq();
+  loadProducts(); // Charge les produits depuis Supabase si configuré
   window.addEventListener('load', initShowcase);
