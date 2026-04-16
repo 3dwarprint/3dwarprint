@@ -198,10 +198,10 @@
         <div class="lg:col-span-7">
           <div class="inline-flex items-center gap-2 border border-accent/20 px-4 py-2 mb-8">
             <span class="w-2 h-2 bg-accent rounded-full"></span>
-            <span class="text-[10px] font-bold uppercase tracking-widest text-accent">Nouveau — Pack Scifi Q4 2024</span>
+            <span class="text-[10px] font-bold uppercase tracking-widest text-accent">Nouveau — Gamme Biomorphic</span>
           </div>
-          <h1 class="font-display font-semibold text-5xl md:text-7xl lg:text-8xl leading-[0.9] tracking-tightest mb-8">Forgez<br>vos<br><span class="text-accent">batailles</span></h1>
-          <p class="text-lg md:text-xl font-light leading-relaxed text-text-muted max-w-lg mb-10">Fichiers STL professionnels pour imprimantes 3D. Décors, terrains et scenarii pour wargames de plateau.</p>
+          <h1 class="font-display font-semibold text-5xl md:text-7xl lg:text-8xl leading-[0.9] tracking-tightest mb-8">Ce qu'il<br>reste<br><span class="text-accent">de</span></h1>
+          <p class="text-lg md:text-xl font-light leading-relaxed text-text-muted max-w-lg mb-10">Fichiers STL pour décors wargame modulaires. Gamme Biomorphic — ambiance contamination organique.</p>
           <div class="flex flex-wrap gap-4">
             <a href="#boutique" class="inline-flex items-center gap-3 py-4 px-8 btn-accent font-display text-[11px] uppercase tracking-widest">Explorer la boutique <span class="iconify text-base" data-icon="lucide:arrow-right"></span></a>
             <a href="#showcase" class="inline-flex items-center gap-3 py-4 px-8 btn-outline font-display font-bold text-[11px] uppercase tracking-widest">Viewer 3D <span class="iconify text-base" data-icon="lucide:rotate-3d"></span></a>
@@ -423,27 +423,35 @@
 
   // ─── DATA ─────────────────────────────────────────────
   var CATS = [
-    { id:'all',     label:'Tout',     count:'250+ fichiers', icon:'lucide:layout-grid' },
-    { id:'sci-fi',  label:'Sci-Fi',   count:'85 fichiers',   icon:'lucide:cpu' },
-    { id:'fantasy', label:'Fantasy',  count:'72 fichiers',   icon:'lucide:castle' },
-    { id:'ruines',  label:'Ruines',   count:'48 fichiers',   icon:'lucide:building-2' },
-    { id:'nature',  label:'Nature',   count:'30 fichiers',   icon:'lucide:trees' },
-    { id:'scatter', label:'Scatter',  count:'15 fichiers',   icon:'lucide:box' },
+    { id:'all',     label:'Tout',        count:'4 fichiers',  icon:'lucide:layout-grid' },
+    { id:'sci-fi',  label:'Sci-Fi',      count:'4 fichiers',  icon:'lucide:cpu' },
   ];
 
   var PRODUCTS = [
-    { id:1,  name:"Bunker Fortifié Sci-Fi",        price:8.90,  cat:"sci-fi",  img:"3dwp-bunker",    badge:"Populaire",  pieces:12, scale:"28mm",     sup:false, desc:"Bunker tactique avec tourelle amovible, trappes et détails technologiques.", details:["12 pièces STL","Tourelle amovible","Trappe latérale","15×12×10 cm","FDM 0.2mm"] },
-    { id:2,  name:"Tour de Garde Médiévale",        price:12.50, cat:"fantasy", img:"3dwp-tower",     badge:"Nouveau",    pieces:18, scale:"28mm",     sup:false, desc:"Tour de garde complète, modulaire sur 3 niveaux avec escalier intérieur.", details:["18 pièces STL","3 niveaux empilables","Escalier intérieur","12×12×25 cm","Toit amovible"] },
-    { id:3,  name:"Ruines Urbaines Pack A",        price:9.90,  cat:"ruines",  img:"3dwp-ruins",     badge:null,         pieces:15, scale:"28/32mm",  sup:false, desc:"Murs effondrés, dalles et débris pour un quartier en ruines.", details:["15 pièces STL","28mm et 32mm","Murs divers","Débris et gravats","Connexions magnétiques"] },
-    { id:4,  name:"Forêt Enchantée — Arbres",      price:6.50,  cat:"nature",  img:"3dwp-trees",     badge:null,         pieces:10, scale:"28mm",     sup:true,  desc:"10 arbres fantastiques avec bases intégrées et racines sculptées.", details:["10 arbres STL","3 tailles","Bases intégrées","Hauteur: 8-18 cm","Résine recommandée"] },
-    { id:5,  name:"Scatter Terrain Industriel",    price:4.90,  cat:"scatter", img:"3dwp-scatter",   badge:"Promo", oldPrice:7.90, pieces:20, scale:"28mm", sup:false, desc:"Barils, caisses, conteneurs, tuyaux pour meubler vos tables.", details:["20 pièces STL","Barils empilables","Caisses ouvertes/fermées","Tuyaux","Case 25mm"] },
-    { id:6,  name:"Complexe Labo Xénobiologique",  price:19.90, cat:"sci-fi",  img:"3dwp-lab",       badge:"Bestseller", pieces:32, scale:"28mm",     sup:false, desc:"Laboratoire complet : salle d'expérience, sas, tubes de stockage.", details:["32 pièces STL","4 salles modulaires","Tubes (insert LED)","Sas fonctionnel","40×30 cm"] },
-    { id:7,  name:"Temple Sombre Fantasy",         price:15.90, cat:"fantasy", img:"3dwp-temple",    badge:null,         pieces:24, scale:"28mm",     sup:false, desc:"Temple aux forces sombres : autel, colonnes, crypte, portail rituel.", details:["24 pièces STL","Autel avec bassin","6 colonnes","Crypte inférieure","Portail runes"] },
-    { id:8,  name:"Zone de Crash Spatial",         price:11.50, cat:"ruines",  img:"3dwp-crash",     badge:"Nouveau",    pieces:14, scale:"28mm",     sup:false, desc:"Épave de vaisseau : cockpit, réacteur fissuré, débris métalliques.", details:["14 pièces STL","Cockpit partiel","Réacteur fissuré","Débris courbés","25×20 cm"] },
-    { id:9,  name:"Rochers et Collines",           price:5.50,  cat:"nature",  img:"3dwp-rocks",     badge:null,         pieces:8,  scale:"28mm",     sup:false, desc:"Formations rocheuses pour couvrir et bloquer les lignes de vue.", details:["8 pièces STL","3 collines","5 rochers","Surfaces texturées","Hauteur max: 12 cm"] },
-    { id:10, name:"Barrières Sci-Fi",              price:3.90,  cat:"scatter", img:"3dwp-barriers",  badge:null,         pieces:16, scale:"28mm",     sup:false, desc:"Barrières Jersey futuristes, sacs de sable, fil barbelé laser.", details:["16 pièces STL","Barrières empilables","Sacs de sable","Fil barbelé stylisé","2-3 cases"] },
-    { id:11, name:"Ville Martienne — Habitations",  price:22.90, cat:"sci-fi",  img:"3dwp-martian",   badge:"Premium",    pieces:40, scale:"28mm",     sup:false, desc:"Quartier résidentiel martien : 4 bâtiments, dômes, passerelles.", details:["40 pièces STL","4 bâtiments","Dômes transparents","Passerelles","60×40 cm"] },
-    { id:12, name:"Campement de Bandits",          price:7.90,  cat:"fantasy", img:"3dwp-bandit",    badge:null,         pieces:22, scale:"28mm",     sup:false, desc:"Camp complet : tentes, feu de camp, cage, tonneaux, potence.", details:["22 pièces STL","3 tentes","Feu de camp","Cage en bois","Scatter inclus"] },
+    {
+      id:1, name:"Biomorphic Base", price:10.00, cat:"sci-fi",
+      img:"images/base_rendu.png", badge:"Nouveau", pieces:1, scale:"28mm", sup:false,
+      desc:"Décor modulaire de base contaminée. Compatible avec toute la gamme Biomorphic.",
+      details:["1 fichier STL","Sans support","Échelle 28mm","Modulaire — s'assemble avec la gamme","FDM & Résine"]
+    },
+    {
+      id:2, name:"Biomorphic Console", price:9.00, cat:"sci-fi",
+      img:"images/console.png", badge:"Nouveau", pieces:1, scale:"28mm", sup:false,
+      desc:"Console contaminée modulaire. Détails organiques haute définition.",
+      details:["1 fichier STL","Sans support","Échelle 28mm","Modulaire — s'assemble avec la gamme","FDM & Résine"]
+    },
+    {
+      id:3, name:"Biomorphic Stairs", price:7.00, cat:"sci-fi",
+      img:"images/stairs.png", badge:null, pieces:1, scale:"28mm", sup:false,
+      desc:"Escalier contaminé modulaire. Connecteurs intégrés pour assemblage rapide.",
+      details:["1 fichier STL","Sans support","Échelle 28mm","Modulaire — s'assemble avec la gamme","FDM & Résine"]
+    },
+    {
+      id:4, name:"Biomorphic Bunker", price:8.00, cat:"sci-fi",
+      img:"images/bunker2.png", badge:null, pieces:1, scale:"28mm", sup:false,
+      desc:"Bunker contaminé modulaire. Point défensif pour vos batailles en zone hostile.",
+      details:["1 fichier STL","Sans support","Échelle 28mm","Modulaire — s'assemble avec la gamme","FDM & Résine"]
+    },
   ];
 
   var FAQS = [
