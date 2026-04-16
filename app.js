@@ -5,10 +5,11 @@
 
   // ─── CONFIG ───────────────────────────────────────────
   var CONFIG = {
-    SUPABASE_URL:  'https://TON-PROJET.supabase.co',
-    SUPABASE_ANON: 'TON_ANON_KEY',
-    STRIPE_PK:     'pk_test_TON_CLE',
-    CHECKOUT_URL:  'https://TON-PROJET.supabase.co/functions/v1/create-checkout',
+    SUPABASE_URL:  'https://vttsiwaulprxzvrenoeh.supabase.co',
+    SUPABASE_ANON: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0dHNpd2F1bHByeHp2cmVub2VoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODE4MzQsImV4cCI6MjA5MTE1NzgzNH0.ohWl768xnAcfn_afiMQZfQ6SxOfShp-oi7kp9oo8ojk',
+    STRIPE_PK:     '	
+pk_test_51Qo5xXBw70jq2iypq9vR4rvWMKOGIWyiDuGkS9VBjKW2kE5BQ8LP0gQRfQaUh8c4gwUTdGBRjenD3od1Xbw8q1St00K0zP9PL0',
+    CHECKOUT_URL:  'https://vttsiwaulprxzvrenoeh.supabase.co/functions/v1/create-checkout',
   };
 
   // ─── UTILS ────────────────────────────────────────────
