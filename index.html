@@ -992,7 +992,7 @@
   // Order modal
   document.querySelector('a[href="#orders"]') || null;
   var orderLinks = document.querySelectorAll('a');
-  for(var i=0;i<orderLinks.length;i++){if(orderLinks[i].getAttribute('href')==='"){/*skip*/} if(orderLinks[i].textContent.indexOf('commandes')!==-1){orderLinks[i].addEventListener('click',function(e){e.preventDefault();openOrderModal();});}}
+  for(var i=0;i<orderLinks.length;i++){if(orderLinks[i].textContent.indexOf('commandes')!==-1){orderLinks[i].addEventListener('click',function(e){e.preventDefault();openOrderModal();});}}
   document.getElementById('orderModalClose').addEventListener('click', closeOrderModal);
   document.getElementById('orderModalBg').addEventListener('click', closeOrderModal);
   document.getElementById('orderLookupBtn').addEventListener('click', function(){
