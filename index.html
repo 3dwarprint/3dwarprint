@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3Dwarprint — Décors Wargame STL</title>
+  <meta name="description" content="Fichiers STL professionnels pour imprimantes 3D. Décors de wargame de plateau.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+  <!--
+    ⚠️ SUPABASE ET STRIPE CHARGÉS DYNAMIQUEMENT (pas ici)
+    Le CDN supabase-js@2 casse les scripts inline s'il est en <head>
+  -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0B0D10', 'bg-alt': '#0E1014', 'bg-card': '#111111',
+            text: '#F2F2F2', 'text-muted': '#888888',
+            accent: '#D4963A', 'accent-hover': '#B87E2C', success: '#34D399',
+          },
+          fontFamily: { display: ['"Inter Tight"','sans-serif'], body: ['"Inter"','sans-serif'] },
+          letterSpacing: { tightest: '-0.04em' }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root{--color-accent:#D4963A;--color-accent-hover:#B87E2C;--color-bg:#0B0D10}
+    *{margin:0;padding:0;box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{background:#0B0D10;color:#F2F2F2;font-family:'Inter',sans-serif}
+    .hide-scrollbar::-webkit-scrollbar{display:none}
+    .hide-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+    .dot-bg{background-image:radial-gradient(#333 1px,transparent 1px);background-size:20px 20px}
+    .grid-bg-lines{background-image:linear-gradient(to right,rgba(242,242,242,.04) 1px,transparent 1px),linear-gradient(to bottom,rgba(242,242,242,.04) 1px,transparent 1px);background-size:40px 40px}
+    .stars-bg{background-image:radial-gradient(rgba(255,255,255,.15) 1px,transparent 1px);background-size:60px 60px;opacity:.3}
+    .card-hover{transition:all .3s ease}
+    .card-hover:hover{border-color:rgba(212,150,58,.3);transform:translateY(-4px);box-shadow:0 8px 30px rgba(212,150,58,.08)}
+    .card-hover:hover .card-img{transform:scale(1.05)}
+    .card-img{transition:transform .6s ease}
+    .btn-accent{background:#D4963A;color:#0B0D10;font-weight:700;transition:all .3s ease}
+    .btn-accent:hover{background:#B87E2C;box-shadow:0 0 30px rgba(212,150,58,.25)}
+    .btn-accent:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+    .btn-outline{border:1px solid rgba(255,255,255,.2);color:#fff;transition:all .3s ease}
+    .btn-outline:hover{border-color:#D4963A;color:#D4963A}
+    .cat-btn{transition:all .2s ease;cursor:pointer}
+    .cat-btn.active{background:#D4963A;color:#0B0D10;border-color:#D4963A}
+    .cat-btn.active .ci{color:#0B0D10!important}
+    .toast-enter{animation:slideR .4s ease forwards}
+    .toast-exit{animation:slideRO .3s ease forwards}
+    @keyframes slideR{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+    @keyframes slideRO{from{transform:translateX(0);opacity:1}to{transform:translateX(120%);opacity:0}}
+    @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .slide-up{animation:slideUp .4s ease forwards}
+    .badge-pulse{animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(212,150,58,.4)}50%{box-shadow:0 0 0 6px rgba(212,150,58,0)}}
+    .spinner{border:2px solid rgba(255,255,255,.1);border-top:2px solid #D4963A;border-radius:50%;width:18px;height:18px;animation:spin .8s linear infinite;display:inline-block}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .vmode{transition:all .2s ease;cursor:pointer}
+    .vmode.on{background:#D4963A;color:#0B0D10;border-color:#D4963A}
+    .line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    #modalViewerCanvas{width:100%!important;height:100%!important;display:block}
+    .drop-active{border-color:#D4963A!important;background:rgba(212,150,58,.05)!important}
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- BANNIERE BETA -->
+  <div style="background:#D4963A;color:#0B0D10;text-align:center;padding:10px 16px;font-size:13px;font-weight:700;letter-spacing:0.05em;position:relative;z-index:60;">
+    VERSION BÊTA — Navigation et viewer 3D actifs. Paiement disponible prochainement.
+  </div>
+
+  <!-- TOASTS -->
+  <div id="toastBox" class="fixed top-20 right-4 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 h-16 flex items-center border-b border-white/[0.08]" style="background:rgba(11,13,16,.92);backdrop-filter:blur(12px)">
+    <div class="max-w-[1440px] mx-auto w-full px-6 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2.5">
+        <div class="w-8 h-8 bg-accent rounded-sm flex items-center justify-center">
+          <span class="iconify text-[#0B0D10] text-lg" data-icon="lucide:hexagon"></span>
+        </div>
+        <span class="font-display font-bold text-lg tracking-tight">3Dwar<span class="text-accent">print</span></span>
+      </a>
+      <div class="hidden lg:flex items-center gap-8">
+        <a href="#boutique" class="text-xs font-medium uppercase tracking-wide text-gray-400 hover:text-white transition-colors">Boutique</a>
+        <a href="#categories" class="text-xs font-medium uppercase tracking-wide text-gray-400 hover:text-white transition-colors">Catégories</a>
+        <a href="#showcase" class="text-xs font-medium uppercase tracking-wide text-gray-400 hover:text-white transition-colors">Viewer 3D</a>
+        <a href="#guide" class="text-xs font-medium uppercase tracking-wide text-gray-400 hover:text-white transition-colors">Guide</a>
+        <a href="#faq" class="text-xs font-medium uppercase tracking-wide text-gray-400 hover:text-white transition-colors">FAQ</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="searchBtn" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+          <span class="iconify text-xl" data-icon="lucide:search"></span>
+        </button>
+        <button id="cartBtn" class="relative w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+          <span class="iconify text-xl" data-icon="lucide:shopping-bag"></span>
+          <span id="cartBadge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-accent text-[#0B0D10] rounded-full text-[10px] font-bold items-center justify-center badge-pulse">0</span>
+        </button>
+        <button id="menuBtn" class="lg:hidden w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+          <span class="iconify text-xl" data-icon="lucide:menu"></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- SEARCH -->
+  <div id="searchBar" class="fixed top-16 left-0 right-0 z-40 hidden border-b border-white/[0.08]" style="background:rgba(11,13,16,.95);backdrop-filter:blur(12px)">
+    <div class="max-w-[1440px] mx-auto px-6 py-4">
+      <div class="flex items-center gap-4">
+        <span class="iconify text-gray-500 text-xl" data-icon="lucide:search"></span>
+        <input id="searchInput" type="text" placeholder="Rechercher un décor, un style..." class="flex-1 bg-transparent text-white text-lg font-light outline-none placeholder:text-gray-600">
+        <button id="searchClose" class="text-gray-500 hover:text-white transition-colors"><span class="iconify text-xl" data-icon="lucide:x"></span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE MENU -->
+  <div id="mobileMenu" class="fixed inset-0 z-40 hidden lg:hidden" style="background:rgba(11,13,16,.98)">
+    <div class="flex flex-col items-center justify-center h-full gap-8">
+      <a href="#boutique" class="mob-link text-2xl font-display font-semibold">Boutique</a>
+      <a href="#showcase" class="mob-link text-2xl font-display font-semibold">Viewer 3D</a>
+      <a href="#guide" class="mob-link text-2xl font-display font-semibold">Guide</a>
+      <a href="#faq" class="mob-link text-2xl font-display font-semibold">FAQ</a>
+      <button id="menuClose" class="mt-8 text-gray-500 hover:text-white"><span class="iconify text-3xl" data-icon="lucide:x"></span></button>
+    </div>
+  </div>
+
+  <!-- CART -->
+  <div id="cartOverlay" class="fixed inset-0 z-50 hidden">
+    <div id="cartBg" class="absolute inset-0 bg-black/60"></div>
+    <div id="cartPanel" class="absolute right-0 top-0 bottom-0 w-full max-w-md bg-bg-alt border-l border-white/[0.08] flex flex-col slide-up">
+      <div class="flex items-center justify-between p-6 border-b border-white/[0.08]">
+        <h3 class="font-display font-semibold text-lg tracking-tight">Votre Panier</h3>
+        <button id="cartClose" class="text-gray-500 hover:text-white"><span class="iconify text-xl" data-icon="lucide:x"></span></button>
+      </div>
+      <div id="cartItems" class="flex-1 overflow-y-auto p-6 hide-scrollbar"></div>
+      <div id="cartFooter" class="p-6 border-t border-white/[0.08] hidden">
+        <div class="mb-4">
+          <label class="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2 block">Email pour la livraison</label>
+          <input type="email" id="checkoutEmail" placeholder="votre@email.com" class="w-full bg-transparent border border-white/[0.08] px-4 py-3 text-sm outline-none focus:border-accent transition-colors placeholder:text-gray-600">
+          <p id="emailErr" class="text-xs text-accent mt-1 hidden">Adresse email requise</p>
+        </div>
+        <div class="flex justify-between items-center mb-4">
+          <span class="text-text-muted text-sm">Total</span>
+          <span id="cartTotal" class="font-display font-bold text-xl">0,00 €</span>
+        </div>
+        <button id="checkoutBtn" class="w-full py-4 btn-accent font-display text-xs uppercase tracking-widest rounded-none flex items-center justify-center gap-2">
+          <span class="iconify text-base" data-icon="lucide:lock"></span> Payer avec Stripe
+        </button>
+        <p class="text-center text-gray-600 text-[10px] mt-3 flex items-center justify-center gap-2">
+          <span class="iconify" data-icon="simple-icons:stripe"></span> Paiement sécurisé
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRODUCT MODAL -->
+  <div id="productModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <div id="productModalBg" class="absolute inset-0 bg-black/70"></div>
+    <div id="productModalPanel" class="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto hide-scrollbar bg-bg-alt border border-white/[0.08] slide-up">
+      <button id="productModalClose" class="absolute top-4 right-4 z-10 w-10 h-10 bg-black/50 flex items-center justify-center text-gray-400 hover:text-white"><span class="iconify text-xl" data-icon="lucide:x"></span></button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <!-- ORDER MODAL -->
+  <div id="orderModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <div id="orderModalBg" class="absolute inset-0 bg-black/70"></div>
+    <div class="relative w-full max-w-lg bg-bg-alt border border-white/[0.08] slide-up">
+      <div class="p-8">
+        <button id="orderModalClose" class="absolute top-4 right-4 text-gray-500 hover:text-white"><span class="iconify text-xl" data-icon="lucide:x"></span></button>
+        <h3 class="font-display font-semibold text-xl mb-6">Mes commandes</h3>
+        <div class="mb-6">
+          <label class="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2 block">Votre email</label>
+          <div class="flex gap-3">
+            <input type="email" id="orderEmail" placeholder="votre@email.com" class="flex-1 bg-transparent border border-white/[0.08] px-4 py-3 text-sm outline-none focus:border-accent transition-colors placeholder:text-gray-600">
+            <button id="orderLookupBtn" class="py-3 px-5 btn-accent font-display text-[11px] uppercase tracking-widest">Chercher</button>
+          </div>
+        </div>
+        <div id="orderResults"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HERO ===== -->
+  <section class="relative min-h-[90vh] flex items-center overflow-hidden pt-16">
+    <div class="absolute inset-0 stars-bg"></div>
+    <div class="absolute top-20 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[120px]"></div>
+    <div class="relative max-w-[1440px] mx-auto px-6 md:px-12 lg:px-20 w-full">
+      <div class="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+        <div class="lg:col-span-7">
+          <div class="inline-flex items-center gap-2 border border-accent/20 px-4 py-2 mb-8">
+            <span class="w-2 h-2 bg-accent rounded-full"></span>
+            <span class="text-[10px] font-bold uppercase tracking-widest text-accent">Nouveau — Pack Scifi Q4 2024</span>
+          </div>
+          <h1 class="font-display font-semibold text-5xl md:text-7xl lg:text-8xl leading-[0.9] tracking-tightest mb-8">Forgez<br>vos<br><span class="text-accent">batailles</span></h1>
+          <p class="text-lg md:text-xl font-light leading-relaxed text-text-muted max-w-lg mb-10">Fichiers STL professionnels pour imprimantes 3D. Décors, terrains et scenarii pour wargames de plateau.</p>
+          <div class="flex flex-wrap gap-4">
+            <a href="#boutique" class="inline-flex items-center gap-3 py-4 px-8 btn-accent font-display text-[11px] uppercase tracking-widest">Explorer la boutique <span class="iconify text-base" data-icon="lucide:arrow-right"></span></a>
+            <a href="#showcase" class="inline-flex items-center gap-3 py-4 px-8 btn-outline font-display font-bold text-[11px] uppercase tracking-widest">Viewer 3D <span class="iconify text-base" data-icon="lucide:rotate-3d"></span></a>
+          </div>
+          <div class="flex items-center gap-8 mt-12 pt-8 border-t border-white/[0.08]">
+            <div><div class="font-display font-bold text-2xl">250+</div><div class="text-text-muted text-xs">Fichiers STL</div></div>
+            <div class="w-px h-10 bg-white/[0.08]"></div>
+            <div><div class="font-display font-bold text-2xl">4.9/5</div><div class="text-text-muted text-xs">Note moyenne</div></div>
+            <div class="w-px h-10 bg-white/[0.08]"></div>
+            <div><div class="font-display font-bold text-2xl">12k+</div><div class="text-text-muted text-xs">Clients</div></div>
+          </div>
+        </div>
+        <div class="lg:col-span-5 relative">
+          <div class="relative aspect-[3/4] overflow-hidden border border-white/[0.08]">
+            <img src="https://picsum.photos/seed/3dwp-hero/600/800.jpg" alt="Décors wargame" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent"></div>
+            <div class="absolute bottom-6 left-6 right-6">
+              <div class="text-[10px] font-bold uppercase tracking-widest text-accent mb-2">Bestseller</div>
+              <div class="font-display font-semibold text-lg">Pack Ville en Ruines — 28mm</div>
+              <div class="text-text-muted text-sm mt-1">45 pièces — Sans support</div>
+            </div>
+          </div>
+          <div class="absolute -bottom-4 -left-4 w-24 h-24 border border-accent/20"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CATEGORIES ===== -->
+  <section id="categories" class="border-y border-white/[0.08] py-16">
+    <div class="max-w-[1440px] mx-auto px-6 md:px-12">
+      <h2 class="font-display font-semibold text-3xl md:text-5xl tracking-tightest leading-[0.95] mb-10">Catégories</h2>
+      <div id="catGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"></div>
+    </div>
+  </section>
+
+  <!-- ===== BOUTIQUE ===== -->
+  <section id="boutique" class="py-24">
+    <div class="max-w-[1440px] mx-auto px-6 md:px-12">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+        <div>
+          <h2 class="font-display font-semibold text-4xl md:text-6xl tracking-tightest leading-[0.95] mb-4">Boutique</h2>
+          <p class="text-text-muted text-lg font-light">Optimisés pour impression FDM & Résine</p>
+        </div>
+        <select id="sortSelect" class="bg-transparent border border-white/[0.08] px-4 py-3 text-xs font-medium uppercase tracking-wide text-gray-400 outline-none cursor-pointer">
+          <option value="popular" class="bg-bg-alt">Populaires</option>
+          <option value="price-asc" class="bg-bg-alt">Prix croissant</option>
+          <option value="price-desc" class="bg-bg-alt">Prix décroissant</option>
+          <option value="newest" class="bg-bg-alt">Récents</option>
+        </select>
+      </div>
+      <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      <div id="noResults" class="hidden text-center py-24">
+        <span class="iconify text-5xl text-gray-600 mb-4 mx-auto block" data-icon="lucide:search-x"></span>
+        <p class="text-text-muted text-lg">Aucun résultat</p>
+        <button id="resetFilters" class="mt-4 text-accent text-sm hover:underline">Réinitialiser</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PACK MISE EN AVANT ===== -->
+  <section class="py-24 border-t border-white/[0.08] relative overflow-hidden">
+    <div class="absolute inset-0 grid-bg-lines opacity-50"></div>
+    <div class="relative max-w-[1440px] mx-auto px-6 md:px-12">
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        <div class="aspect-[4/3] overflow-hidden border border-white/[0.08]"><img src="https://picsum.photos/seed/3dwp-starter/800/600.jpg" alt="Starter Kit" class="w-full h-full object-cover"></div>
+        <div>
+          <div class="inline-flex items-center gap-2 border border-accent/30 px-4 py-2 mb-8"><span class="w-2 h-2 bg-accent rounded-full"></span><span class="text-[10px] font-bold uppercase tracking-widest text-accent">Pack Complet</span></div>
+          <h2 class="font-display font-semibold text-4xl md:text-5xl tracking-tightest leading-[0.95] mb-6">Starter Kit<br>Wargame <span class="text-accent">Ultimate</span></h2>
+          <p class="text-text-muted text-lg font-light leading-relaxed mb-8">120+ pièces couvrant tous les types de terrain. Compatible 28mm et 32mm.</p>
+          <div class="grid grid-cols-2 gap-4 mb-10">
+            <div class="border border-white/[0.08] p-4"><span class="iconify text-accent text-xl mb-2 block" data-icon="lucide:file-check"></span><div class="font-display font-semibold text-sm">120+ STL</div><div class="text-text-muted text-xs">Fichiers optimisés</div></div>
+            <div class="border border-white/[0.08] p-4"><span class="iconify text-accent text-xl mb-2 block" data-icon="lucide:ruler"></span><div class="font-display font-semibold text-sm">28/32mm</div><div class="text-text-muted text-xs">Échelles incluses</div></div>
+            <div class="border border-white/[0.08] p-4"><span class="iconify text-accent text-xl mb-2 block" data-icon="lucide:printer"></span><div class="font-display font-semibold text-sm">Sans support</div><div class="text-text-muted text-xs">Print-ready FDM</div></div>
+            <div class="border border-white/[0.08] p-4"><span class="iconify text-accent text-xl mb-2 block" data-icon="lucide:gift"></span><div class="font-display font-semibold text-sm">Mises à jour</div><div class="text-text-muted text-xs">Gratuites à vie</div></div>
+          </div>
+          <div class="flex items-end gap-4 mb-6">
+            <span class="font-display font-bold text-4xl">49,90 €</span>
+            <span class="text-text-muted line-through text-lg mb-1">89,90 €</span>
+            <span class="bg-accent/20 text-accent text-[10px] font-bold uppercase tracking-widest px-3 py-1 mb-1">-44%</span>
+          </div>
+          <button id="addPackBtn" class="inline-flex items-center gap-3 py-4 px-8 btn-accent font-display text-[11px] uppercase tracking-widest">Ajouter au panier <span class="iconify text-base" data-icon="lucide:shopping-bag"></span></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== VIEWER 3D SHOWCASE ===== -->
+  <section id="showcase" class="py-24 border-t border-white/[0.08] relative">
+    <div class="absolute inset-0 dot-bg opacity-20"></div>
+    <div class="relative max-w-[1440px] mx-auto px-6 md:px-12">
+      <div class="grid lg:grid-cols-2 gap-12 items-center">
+        <div class="relative aspect-square border border-white/[0.08] overflow-hidden" style="background:#090B0E;max-height:500px">
+          <canvas id="showcaseCanvas"></canvas>
+          <div class="absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5">
+            <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+            <span class="text-[10px] font-bold uppercase tracking-widest text-gray-300">Démo auto-rotation</span>
+          </div>
+          <div class="absolute bottom-0 left-0 right-0 px-4 py-3 border-t border-white/[0.08] flex items-center justify-between" style="background:rgba(11,13,16,.8);backdrop-filter:blur(8px)">
+            <span class="text-[10px] text-gray-500 uppercase tracking-widest">Viewer interactif sur chaque fiche produit</span>
+            <span class="text-[10px] text-gray-500">Solid · Normal · Wireframe</span>
+          </div>
+        </div>
+        <div>
+          <div class="inline-flex items-center gap-2 border border-accent/20 px-4 py-2 mb-6">
+            <span class="iconify text-accent text-sm" data-icon="lucide:rotate-3d"></span>
+            <span class="text-[10px] font-bold uppercase tracking-widest text-accent">Inspection 3D</span>
+          </div>
+          <h2 class="font-display font-semibold text-4xl md:text-5xl tracking-tightest leading-[0.95] mb-6">Examinez<br>chaque <span class="text-accent">détail</span></h2>
+          <p class="text-text-muted text-lg font-light leading-relaxed mb-8">Chaque fiche produit intègre un viewer 3D interactif. Tournez, zoomez, changez de mode d'affichage pour inspecter le modèle avant d'acheter.</p>
+          <div class="space-y-4 mb-8">
+            <div class="flex items-start gap-3"><span class="iconify text-accent text-xl mt-0.5" data-icon="lucide:check-circle"></span><div><div class="font-medium text-sm">Rotation libre + zoom</div><div class="text-text-muted text-xs">Examinez le modèle sous tous les angles</div></div></div>
+            <div class="flex items-start gap-3"><span class="iconify text-accent text-xl mt-0.5" data-icon="lucide:check-circle"></span><div><div class="font-medium text-sm">3 modes d'affichage</div><div class="text-text-muted text-xs">Solid, Normal (carte de normales), Wireframe</div></div></div>
+            <div class="flex items-start gap-3"><span class="iconify text-accent text-xl mt-0.5" data-icon="lucide:check-circle"></span><div><div class="font-medium text-sm">Import de vos propres STL</div><div class="text-text-muted text-xs">Glissez un fichier pour le comparer</div></div></div>
+            <div class="flex items-start gap-3"><span class="iconify text-accent text-xl mt-0.5" data-icon="lucide:check-circle"></span><div><div class="font-medium text-sm">Infos techniques</div><div class="text-text-muted text-xs">Sommets, triangles, dimensions en temps réel</div></div></div>
+          </div>
+          <a href="#boutique" class="inline-flex items-center gap-2 py-3 px-6 btn-outline font-display font-bold text-[11px] uppercase tracking-widest">Voir un produit <span class="iconify text-base" data-icon="lucide:arrow-right"></span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== GUIDE ===== -->
+  <section id="guide" class="py-24 border-t border-white/[0.08]">
+    <div class="max-w-[1440px] mx-auto px-6 md:px-12">
+      <div class="grid md:grid-cols-12 gap-8 md:gap-12">
+        <div class="md:col-span-4"><h2 class="font-display font-semibold text-4xl md:text-5xl tracking-tightest leading-[0.95]">Comment<br>ça<br><span class="text-accent">marche</span></h2></div>
+        <div class="md:col-span-8">
+          <div class="grid sm:grid-cols-2 gap-6">
+            <div class="border border-white/[0.08] p-8 card-hover"><div class="font-display font-bold text-5xl text-accent/15 mb-4">01</div><span class="iconify text-2xl text-accent mb-4 block" data-icon="lucide:mouse-pointer-click"></span><h3 class="font-display font-semibold text-lg mb-3">Choisissez vos fichiers</h3><p class="text-text-muted text-sm leading-relaxed">Parcourez par catégorie, utilisez le viewer 3D pour inspecter.</p></div>
+            <div class="border border-white/[0.08] p-8 card-hover"><div class="font-display font-bold text-5xl text-accent/15 mb-4">02</div><span class="iconify text-2xl text-accent mb-4 block" data-icon="lucide:credit-card"></span><h3 class="font-display font-semibold text-lg mb-3">Paiement Stripe</h3><p class="text-text-muted text-sm leading-relaxed">Paiement sécurisé par carte. Votre email pour la livraison.</p></div>
+            <div class="border border-white/[0.08] p-8 card-hover"><div class="font-display font-bold text-5xl text-accent/15 mb-4">03</div><span class="iconify text-2xl text-accent mb-4 block" data-icon="lucide:download"></span><h3 class="font-display font-semibold text-lg mb-3">Téléchargement instantané</h3><p class="text-text-muted text-sm leading-relaxed">Liens immédiats après paiement. ZIP organisés. Valable à vie.</p></div>
+            <div class="border border-white/[0.08] p-8 card-hover"><div class="font-display font-bold text-5xl text-accent/15 mb-4">04</div><span class="iconify text-2xl text-accent mb-4 block" data-icon="lucide:printer"></span><h3 class="font-display font-semibold text-lg mb-3">Imprimez et jouez</h3><p class="text-text-muted text-sm leading-relaxed">Fichiers pré-orientés. Compatible PrusaSlicer, Cura, Chitubox.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FAQ ===== -->
+  <section id="faq" class="py-24 border-t border-white/[0.08]">
+    <div class="max-w-[1440px] mx-auto px-6 md:px-12">
+      <div class="max-w-2xl mx-auto">
+        <h2 class="font-display font-semibold text-4xl md:text-5xl tracking-tightest leading-[0.95] mb-12 text-center">Questions<br><span class="text-accent">fréquentes</span></h2>
+        <div id="faqList" class="border-t border-white/[0.08]"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== NEWSLETTER ===== -->
+  <section class="py-24 border-t border-white/[0.08] relative">
+    <div class="absolute inset-0 dot-bg opacity-30"></div>
+    <div class="relative max-w-[1440px] mx-auto px-6 md:px-12 text-center">
+      <h2 class="font-display font-semibold text-4xl md:text-5xl tracking-tightest leading-[0.95] mb-4">Restez informé</h2>
+      <p class="text-text-muted text-lg font-light mb-10 max-w-md mx-auto">Nouveaux kits, promotions et fichiers gratuits chaque mois.</p>
+      <div class="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
+        <input type="email" id="nlEmail" placeholder="votre@email.com" class="flex-1 bg-transparent border border-white/[0.08] px-6 py-4 text-sm outline-none focus:border-accent transition-colors placeholder:text-gray-600">
+        <button id="nlBtn" class="py-4 px-8 btn-accent font-display text-[11px] uppercase tracking-widest shrink-0">S'inscrire</button>
+      </div>
+      <p id="nlMsg" class="text-xs mt-3 hidden"></p>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="border-t border-white/[0.08] py-16">
+    <div class="max-w-[1440px] mx-auto px-6 md:px-12">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+        <div>
+          <div class="flex items-center gap-2 mb-6"><div class="w-8 h-8 bg-accent rounded-sm flex items-center justify-center"><span class="iconify text-[#0B0D10] text-lg" data-icon="lucide:hexagon"></span></div><span class="font-display font-bold text-lg tracking-tight">3Dwar<span class="text-accent">print</span></span></div>
+          <p class="text-text-muted text-sm leading-relaxed">Décors de wargame professionnels pour imprimantes 3D. 3dwarprint.com</p>
+        </div>
+        <div><h4 class="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-6">Boutique</h4><ul class="space-y-3"><li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Sci-Fi</a></li><li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Fantasy</a></li><li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Ruines</a></li><li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Packs</a></li></ul></div>
+        <div><h4 class="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-6">Légal</h4><ul class="space-y-3"><li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">CGV</a></li><li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Mentions légales</a></li><li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Confidentialité</a></li><li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Licence</a></li></ul></div>
+        <div><h4 class="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-6">Contact</h4><ul class="space-y-3"><li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2"><span class="iconify text-base" data-icon="lucide:mail"></span>contact@3dwarprint.com</a></li><li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2"><span class="iconify text-base" data-icon="lucide:message-circle"></span>Discord</a></li><li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2"><span class="iconify text-base" data-icon="lucide:instagram"></span>Instagram</a></li></ul></div>
+      </div>
+      <div class="flex flex-col sm:flex-row items-center justify-between pt-8 border-t border-white/[0.08] gap-4">
+        <p class="text-text-muted text-xs">© 2024 3Dwarprint. Auto-entrepreneur. Tous droits réservés.</p>
+        <div class="flex items-center gap-3 text-gray-600"><span class="iconify text-xl" data-icon="simple-icons:stripe"></span><span class="text-[10px] uppercase tracking-widest">Paiements sécurisés</span></div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ═══════════════════ JAVASCRIPT ═══════════════════ -->
+  <script>
+  /*
+    ⚠️ Ce bloc est le SEUL <script> de la page.
+    Supabase et Stripe sont chargés dynamiquement au besoin.
+  */
+
+  // ─── CONFIG ───────────────────────────────────────────
+  var CONFIG = {
+    SUPABASE_URL:  'https://TON-PROJET.supabase.co',
+    SUPABASE_ANON: 'TON_ANON_KEY',
+    STRIPE_PK:     'pk_test_TON_CLE',
+    CHECKOUT_URL:  'https://TON-PROJET.supabase.co/functions/v1/create-checkout',
+  };
+
+  // ─── UTILS ────────────────────────────────────────────
+  function loadScript(src) {
+    return new Promise(function(resolve, reject) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  function toast(msg) {
+    var c = document.getElementById('toastBox');
+    var t = document.createElement('div');
+    t.className = 'pointer-events-auto flex items-center gap-3 bg-bg-alt border border-accent/20 px-5 py-3 toast-enter';
+    t.innerHTML = '<span class="iconify text-accent text-lg" data-icon="lucide:check-circle"></span><span class="text-sm">' + msg + '</span>';
+    c.appendChild(t);
+    setTimeout(function() { t.classList.remove('toast-enter'); t.classList.add('toast-exit'); setTimeout(function() { t.remove(); }, 300); }, 2500);
+  }
+
+  function fmtPrice(n) { return n.toFixed(2).replace('.', ',') + ' €'; }
+
+  // ─── DATA ─────────────────────────────────────────────
+  var CATS = [
+    { id:'all',     label:'Tout',     count:'250+ fichiers', icon:'lucide:layout-grid' },
+    { id:'sci-fi',  label:'Sci-Fi',   count:'85 fichiers',   icon:'lucide:cpu' },
+    { id:'fantasy', label:'Fantasy',  count:'72 fichiers',   icon:'lucide:castle' },
+    { id:'ruines',  label:'Ruines',   count:'48 fichiers',   icon:'lucide:building-2' },
+    { id:'nature',  label:'Nature',   count:'30 fichiers',   icon:'lucide:trees' },
+    { id:'scatter', label:'Scatter',  count:'15 fichiers',   icon:'lucide:box' },
+  ];
+
+  var PRODUCTS = [
+    { id:1,  name:"Bunker Fortifié Sci-Fi",        price:8.90,  cat:"sci-fi",  img:"3dwp-bunker",    badge:"Populaire",  pieces:12, scale:"28mm",     sup:false, desc:"Bunker tactique avec tourelle amovible, trappes et détails technologiques.", details:["12 pièces STL","Tourelle amovible","Trappe latérale","15×12×10 cm","FDM 0.2mm"] },
+    { id:2,  name:"Tour de Garde Médiévale",        price:12.50, cat:"fantasy", img:"3dwp-tower",     badge:"Nouveau",    pieces:18, scale:"28mm",     sup:false, desc:"Tour de garde complète, modulaire sur 3 niveaux avec escalier intérieur.", details:["18 pièces STL","3 niveaux empilables","Escalier intérieur","12×12×25 cm","Toit amovible"] },
+    { id:3,  name:"Ruines Urbaines Pack A",        price:9.90,  cat:"ruines",  img:"3dwp-ruins",     badge:null,         pieces:15, scale:"28/32mm",  sup:false, desc:"Murs effondrés, dalles et débris pour un quartier en ruines.", details:["15 pièces STL","28mm et 32mm","Murs divers","Débris et gravats","Connexions magnétiques"] },
+    { id:4,  name:"Forêt Enchantée — Arbres",      price:6.50,  cat:"nature",  img:"3dwp-trees",     badge:null,         pieces:10, scale:"28mm",     sup:true,  desc:"10 arbres fantastiques avec bases intégrées et racines sculptées.", details:["10 arbres STL","3 tailles","Bases intégrées","Hauteur: 8-18 cm","Résine recommandée"] },
+    { id:5,  name:"Scatter Terrain Industriel",    price:4.90,  cat:"scatter", img:"3dwp-scatter",   badge:"Promo", oldPrice:7.90, pieces:20, scale:"28mm", sup:false, desc:"Barils, caisses, conteneurs, tuyaux pour meubler vos tables.", details:["20 pièces STL","Barils empilables","Caisses ouvertes/fermées","Tuyaux","Case 25mm"] },
+    { id:6,  name:"Complexe Labo Xénobiologique",  price:19.90, cat:"sci-fi",  img:"3dwp-lab",       badge:"Bestseller", pieces:32, scale:"28mm",     sup:false, desc:"Laboratoire complet : salle d'expérience, sas, tubes de stockage.", details:["32 pièces STL","4 salles modulaires","Tubes (insert LED)","Sas fonctionnel","40×30 cm"] },
+    { id:7,  name:"Temple Sombre Fantasy",         price:15.90, cat:"fantasy", img:"3dwp-temple",    badge:null,         pieces:24, scale:"28mm",     sup:false, desc:"Temple aux forces sombres : autel, colonnes, crypte, portail rituel.", details:["24 pièces STL","Autel avec bassin","6 colonnes","Crypte inférieure","Portail runes"] },
+    { id:8,  name:"Zone de Crash Spatial",         price:11.50, cat:"ruines",  img:"3dwp-crash",     badge:"Nouveau",    pieces:14, scale:"28mm",     sup:false, desc:"Épave de vaisseau : cockpit, réacteur fissuré, débris métalliques.", details:["14 pièces STL","Cockpit partiel","Réacteur fissuré","Débris courbés","25×20 cm"] },
+    { id:9,  name:"Rochers et Collines",           price:5.50,  cat:"nature",  img:"3dwp-rocks",     badge:null,         pieces:8,  scale:"28mm",     sup:false, desc:"Formations rocheuses pour couvrir et bloquer les lignes de vue.", details:["8 pièces STL","3 collines","5 rochers","Surfaces texturées","Hauteur max: 12 cm"] },
+    { id:10, name:"Barrières Sci-Fi",              price:3.90,  cat:"scatter", img:"3dwp-barriers",  badge:null,         pieces:16, scale:"28mm",     sup:false, desc:"Barrières Jersey futuristes, sacs de sable, fil barbelé laser.", details:["16 pièces STL","Barrières empilables","Sacs de sable","Fil barbelé stylisé","2-3 cases"] },
+    { id:11, name:"Ville Martienne — Habitations",  price:22.90, cat:"sci-fi",  img:"3dwp-martian",   badge:"Premium",    pieces:40, scale:"28mm",     sup:false, desc:"Quartier résidentiel martien : 4 bâtiments, dômes, passerelles.", details:["40 pièces STL","4 bâtiments","Dômes transparents","Passerelles","60×40 cm"] },
+    { id:12, name:"Campement de Bandits",          price:7.90,  cat:"fantasy", img:"3dwp-bandit",    badge:null,         pieces:22, scale:"28mm",     sup:false, desc:"Camp complet : tentes, feu de camp, cage, tonneaux, potence.", details:["22 pièces STL","3 tentes","Feu de camp","Cage en bois","Scatter inclus"] },
+  ];
+
+  var FAQS = [
+    { q:"Quelle échelle sont les fichiers STL ?", a:"Majoritairement 28mm (Warhammer 40k, Age of Sigmar). Certains kits incluent 32mm et 15mm. Chaque fiche précise les dimensions exactes." },
+    { q:"Les fichiers nécessitent-ils des supports ?", a:"Tous nos fichiers sont conçus sans support. Pièces pré-orientées et découpées. Guide d'impression inclus dans chaque archive." },
+    { q:"Puis-je revendre les pièces imprimées ?", a:"Licence personnelle pour votre usage. Licence commerciale disponible en option. Redistribution des fichiers numériques interdite." },
+    { q:"Mes données bancaires sont-elles sécurisées ?", a:"Le paiement est géré par Stripe. Nous ne stockons aucune donnée bancaire. Stripe est conforme PCI-DSS niveau 1." },
+    { q:"J'ai perdu mes liens de téléchargement", a:"Utilisez la section « Mes commandes » avec l'email utilisé lors du paiement pour récupérer tous vos liens." },
+  ];
+
+  // ─── STATE ────────────────────────────────────────────
+  var cart = [];
+  var currentCat = 'all';
+
+  // ─── CATEGORIES ───────────────────────────────────────
+  function renderCats() {
+    var html = '';
+    for (var i = 0; i < CATS.length; i++) {
+      var c = CATS[i];
+      var active = c.id === currentCat ? ' active' : '';
+      html += '<button class="cat-btn border border-white/[0.08] p-6 text-left card-hover' + active + '" data-cat="' + c.id + '">' +
+        '<span class="iconify ci text-2xl text-gray-500 mb-4 block" data-icon="' + c.icon + '"></span>' +
+        '<div class="font-display font-semibold text-sm">' + c.label + '</div>' +
+        '<div class="text-text-muted text-xs mt-1">' + c.count + '</div></button>';
+    }
+    document.getElementById('catGrid').innerHTML = html;
+
+    var btns = document.querySelectorAll('.cat-btn');
+    for (var j = 0; j < btns.length; j++) {
+      btns[j].addEventListener('click', function() {
+        currentCat = this.getAttribute('data-cat');
+        renderCats();
+        renderProducts();
+      });
+    }
+  }
+
+  // ─── PRODUCTS ─────────────────────────────────────────
+  function getFiltered() {
+    var search = document.getElementById('searchInput').value.toLowerCase();
+    var sort = document.getElementById('sortSelect').value;
+    var list = [];
+    for (var i = 0; i < PRODUCTS.length; i++) {
+      var p = PRODUCTS[i];
+      var matchCat = currentCat === 'all' || p.cat === currentCat;
+      var matchSearch = !search || p.name.toLowerCase().indexOf(search) !== -1 || p.desc.toLowerCase().indexOf(search) !== -1 || p.cat.indexOf(search) !== -1;
+      if (matchCat && matchSearch) list.push(p);
+    }
+    if (sort === 'price-asc') list.sort(function(a,b){return a.price-b.price;});
+    else if (sort === 'price-desc') list.sort(function(a,b){return b.price-a.price;});
+    else if (sort === 'newest') list.sort(function(a,b){return (b.badge==='Nouveau'?1:0)-(a.badge==='Nouveau'?1:0);});
+    else list.sort(function(a,b){return (b.badge==='Bestseller'||b.badge==='Populaire'?1:0)-(a.badge==='Bestseller'||a.badge==='Populaire'?1:0);});
+    return list;
+  }
+
+  function renderProducts() {
+    var list = getFiltered();
+    var grid = document.getElementById('productsGrid');
+    var noR = document.getElementById('noResults');
+    if (!list.length) { grid.innerHTML = ''; noR.classList.remove('hidden'); return; }
+    noR.classList.add('hidden');
+    var html = '';
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i];
+      var imgUrl = 'https://picsum.photos/seed/' + p.img + '/600/450.jpg';
+      html += '<div class="prod-card border border-white/[0.08] card-hover group cursor-pointer" data-id="' + p.id + '" style="animation:slideUp .4s ease ' + (i*0.05) + 's both">' +
+        '<div class="relative aspect-[4/3] overflow-hidden bg-bg-card">' +
+        '<img src="' + imgUrl + '" alt="' + p.name + '" class="card-img w-full h-full object-cover" loading="lazy">' +
+        '<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>' +
+        (p.badge ? '<div class="absolute top-4 left-4 bg-accent text-[#0B0D10] px-3 py-1 text-[10px] font-bold uppercase tracking-widest">' + p.badge + '</div>' : '') +
+        '<div class="absolute top-4 right-4">' + (!p.sup ? '<span class="bg-black/60 backdrop-blur-sm text-[9px] font-bold uppercase tracking-wider px-2 py-1 text-green-400">Sans support</span>' : '<span class="bg-black/60 backdrop-blur-sm text-[9px] font-bold uppercase tracking-wider px-2 py-1 text-yellow-400">Support requis</span>') + '</div>' +
+        '<div class="absolute bottom-4 left-4 right-4 flex items-end justify-between"><span class="flex items-center gap-2 text-xs text-gray-300"><span class="iconify text-sm" data-icon="lucide:box"></span>' + p.pieces + ' pièces</span><span class="text-xs text-gray-300">' + p.scale + '</span></div>' +
+        '</div><div class="p-6"><div class="flex items-start justify-between gap-4 mb-3"><h3 class="font-display font-semibold text-base tracking-tight leading-tight">' + p.name + '</h3><div class="text-right shrink-0">' +
+        (p.oldPrice ? '<span class="text-text-muted text-xs line-through block">' + fmtPrice(p.oldPrice) + '</span>' : '') +
+        '<span class="font-display font-bold text-lg">' + fmtPrice(p.price) + '</span></div></div>' +
+        '<p class="text-text-muted text-sm line-clamp-2 mb-4">' + p.desc + '</p>' +
+        '<button class="add-btn w-full py-3 border border-white/[0.1] text-[11px] font-bold uppercase tracking-widest hover:bg-accent hover:border-accent hover:text-[#0B0D10] transition-all flex items-center justify-center gap-2" data-id="' + p.id + '"><span class="iconify text-sm" data-icon="lucide:shopping-bag"></span>Ajouter au panier</button></div></div>';
+    }
+    grid.innerHTML = html;
+
+    // Event listeners
+    var cards = document.querySelectorAll('.prod-card');
+    for (var j = 0; j < cards.length; j++) {
+      cards[j].addEventListener('click', function(e) {
+        if (e.target.closest('.add-btn')) return;
+        openModal(parseInt(this.getAttribute('data-id')));
+      });
+    }
+    var addBtns = document.querySelectorAll('.add-btn');
+    for (var k = 0; k < addBtns.length; k++) {
+      addBtns[k].addEventListener('click', function(e) {
+        e.stopPropagation();
+        var id = parseInt(this.getAttribute('data-id'));
+        addToCart(id);
+      });
+    }
+  }
+
+  // ─── CART ─────────────────────────────────────────────
+  function addToCart(id) {
+    var p = null;
+    for (var i = 0; i < PRODUCTS.length; i++) { if (PRODUCTS[i].id === id) { p = PRODUCTS[i]; break; } }
+    if (!p) return;
+    var found = false;
+    for (var j = 0; j < cart.length; j++) {
+      if (cart[j].id === id) { cart[j].qty++; found = true; break; }
+    }
+    if (!found) cart.push({ id:p.id, name:p.name, price:p.price, img:p.img, qty:1 });
+    updateCart();
+    toast(p.name + ' ajouté');
+  }
+
+  function removeFromCart(id) {
+    var newCart = [];
+    for (var i = 0; i < cart.length; i++) { if (cart[i].id !== id) newCart.push(cart[i]); }
+    cart = newCart;
+    updateCart();
+  }
+
+  function changeQty(id, delta) {
+    for (var i = 0; i < cart.length; i++) {
+      if (cart[i].id === id) {
+        cart[i].qty += delta;
+        if (cart[i].qty <= 0) { removeFromCart(id); return; }
+        break;
+      }
+    }
+    updateCart();
+  }
+
+  function updateCart() {
+    var count = 0, total = 0;
+    for (var i = 0; i < cart.length; i++) { count += cart[i].qty; total += cart[i].price * cart[i].qty; }
+    var badge = document.getElementById('cartBadge');
+    var footer = document.getElementById('cartFooter');
+    if (count > 0) { badge.classList.remove('hidden'); badge.classList.add('flex'); badge.textContent = count; footer.classList.remove('hidden'); }
+    else { badge.classList.add('hidden'); badge.classList.remove('flex'); footer.classList.add('hidden'); }
+    document.getElementById('cartTotal').textContent = fmtPrice(total);
+
+    var itemsEl = document.getElementById('cartItems');
+    if (!cart.length) {
+      itemsEl.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-center"><span class="iconify text-4xl text-gray-600 mb-4" data-icon="lucide:shopping-bag"></span><p class="text-text-muted text-sm">Votre panier est vide</p></div>';
+      return;
+    }
+    var html = '';
+    for (var j = 0; j < cart.length; j++) {
+      var c = cart[j];
+      html += '<div class="flex gap-4 py-4 border-b border-white/[0.08]"><div class="w-20 h-20 shrink-0 overflow-hidden bg-bg-card"><img src="https://picsum.photos/seed/' + c.img + '/200/200.jpg" class="w-full h-full object-cover"></div>' +
+        '<div class="flex-1 min-w-0"><h4 class="font-display font-medium text-sm truncate">' + c.name + '</h4><p class="text-text-muted text-xs mt-1">' + fmtPrice(c.price) + '</p>' +
+        '<div class="flex items-center gap-3 mt-2">' +
+        '<button class="cq-btn w-7 h-7 border border-white/[0.08] flex items-center justify-center text-gray-400 hover:text-white transition-colors" data-id="' + c.id + '" data-d="-1"><span class="iconify text-xs" data-icon="lucide:minus"></span></button>' +
+        '<span class="text-sm font-medium w-6 text-center">' + c.qty + '</span>' +
+        '<button class="cq-btn w-7 h-7 border border-white/[0.08] flex items-center justify-center text-gray-400 hover:text-white transition-colors" data-id="' + c.id + '" data-d="1"><span class="iconify text-xs" data-icon="lucide:plus"></span></button>' +
+        '<button class="rm-btn ml-auto text-gray-600 hover:text-accent transition-colors" data-id="' + c.id + '"><span class="iconify text-base" data-icon="lucide:trash-2"></span></button>' +
+        '</div></div></div>';
+    }
+    itemsEl.innerHTML = html;
+
+    var cqBtns = itemsEl.querySelectorAll('.cq-btn');
+    for (var k = 0; k < cqBtns.length; k++) {
+      cqBtns[k].addEventListener('click', function() { changeQty(parseInt(this.getAttribute('data-id')), parseInt(this.getAttribute('data-d'))); });
+    }
+    var rmBtns = itemsEl.querySelectorAll('.rm-btn');
+    for (var l = 0; l < rmBtns.length; l++) {
+      rmBtns[l].addEventListener('click', function() { removeFromCart(parseInt(this.getAttribute('data-id'))); });
+    }
+  }
+
+  // ─── PRODUCT MODAL + 3D VIEWER ───────────────────────
+  var mvRenderer, mvScene, mvCamera, mvControls, mvMesh, mvAnim, mvMode = 'solid', mvColor = '#C0C0C0';
+
+  function createDemoShape(cat) {
+    var g = new THREE.Group();
+    var m = new THREE.MeshStandardMaterial({ color: mvColor, roughness: 0.5, metalness: 0.2 });
+    var mDark = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.8 });
+    var mWood = new THREE.MeshStandardMaterial({ color: '#8B7355', roughness: 0.7 });
+    var mMetal = new THREE.MeshStandardMaterial({ color: '#555', roughness: 0.4, metalness: 0.6 });
+
+    function box(w,h,d,x,y,z,mat) { var b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat||m); b.position.set(x,y,z); b.castShadow=true; b.receiveShadow=true; g.add(b); return b; }
+    function cyl(rt,rb,h,s,x,y,z,mat) { var c=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,s),mat||m); c.position.set(x,y,z); c.castShadow=true; g.add(c); return c; }
+
+    if (cat === 'sci-fi') {
+      box(4,2.5,3.5,0,1.25,0); box(4.4,0.2,3.9,0,2.6,0);
+      box(1.4,2,0.15,0,1,1.73,mDark); box(0.8,0.6,0.05,1.2,1.8,1.73,mMetal);
+      for(var i=0;i<4;i++) box(0.6,0.05,0.05,-1.3,1.4+i*0.2,1.73,mMetal);
+      box(2,0.15,0.6,0,0.075,2.15); box(0.3,2.5,0.6,-2.2,1.25,0); box(0.3,2.5,0.6,2.2,1.25,0);
+      cyl(0.3,0.3,0.8,12,2.8,0.4,2,mWood);
+    } else if (cat === 'fantasy') {
+      box(3,3,3,0,1.5,0); box(3.4,0.15,3.4,0,3.075,0);
+      cyl(1.8,2,1.5,8,0,4.2,m); cyl(2,1.8,0.3,8,4.8,4.2,m);
+      box(0.8,2,0.1,0,1,1.51,mDark);
+    } else if (cat === 'ruines') {
+      box(3,2.5,0.4,0,1.25,0); box(1.2,1.8,0.4,1.8,0.9,0);
+      box(0.6,0.3,0.4,2.7,0.15,0.3); box(0.5,0.2,0.3,-0.5,0.1,0.5);
+      box(0.8,0.15,0.6,0.5,0.075,0.8); box(0.3,0.4,0.3,1.2,0.2,1);
+    } else if (cat === 'nature') {
+      cyl(0.15,0.2,3,8,0,1.5,mWood);
+      var leaves = new THREE.Mesh(new THREE.SphereGeometry(1.2,8,6), new THREE.MeshStandardMaterial({color:'#4A6741',roughness:0.8}));
+      leaves.position.set(0,3.5,1.5); leaves.castShadow=true; g.add(leaves);
+      box(1.5,0.8,1.2,3,0.4,0,new THREE.MeshStandardMaterial({color:'#777',roughness:0.9}));
+      box(0.8,0.5,0.8,-2,0.25,-1,new THREE.MeshStandardMaterial({color:'#666',roughness:0.9}));
+    } else {
+      box(0.6,0.8,0.6,-1,0.4,0,mWood); box(0.6,0.8,0.6,0.8,0.4,0,mWood);
+      box(0.8,0.5,0.6,2,0.25,0.5); box(1,0.3,0.7,-0.5,0.15,1.2);
+      cyl(0.25,0.25,0.7,10,1.5,0.35,-0.8,mMetal);
+    }
+    return g;
+  }
+
+  function initModalViewer(canvas, cat) {
+    mvScene = new THREE.Scene();
+    mvScene.background = new THREE.Color('#090B0E');
+    var w = canvas.parentElement.clientWidth, h = canvas.parentElement.clientHeight;
+    mvCamera = new THREE.PerspectiveCamera(45, w/Math.max(h,1), 0.1, 1000);
+    mvCamera.position.set(6, 5, 6);
+    mvRenderer = new THREE.WebGLRenderer({ canvas:canvas, antialias:true });
+    mvRenderer.setSize(w, h);
+    mvRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    mvRenderer.shadowMap.enabled = true;
+    mvRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+    mvRenderer.toneMappingExposure = 1.1;
+
+    mvScene.add(new THREE.AmbientLight('#ffffff', 0.4));
+    var dl = new THREE.DirectionalLight('#FFF5E6', 0.9);
+    dl.position.set(6,10,5); dl.castShadow=true; dl.shadow.mapSize.set(512,512);
+    dl.shadow.camera.near=0.5; dl.shadow.camera.far=30; dl.shadow.camera.left=-8; dl.shadow.camera.right=8; dl.shadow.camera.top=8; dl.shadow.camera.bottom=-8;
+    mvScene.add(dl);
+    var fill = new THREE.DirectionalLight('#D4963A', 0.2); fill.position.set(-4,3,-4); mvScene.add(fill);
+
+    mvScene.add(new THREE.GridHelper(16,16,'#1a1d22','#14161a'));
+    var gnd = new THREE.Mesh(new THREE.PlaneGeometry(16,16), new THREE.ShadowMaterial({opacity:0.3}));
+    gnd.rotation.x=-Math.PI/2; gnd.position.y=-0.01; gnd.receiveShadow=true; mvScene.add(gnd);
+
+    mvMesh = createDemoShape(cat);
+    mvScene.add(mvMesh);
+    var box = new THREE.Box3().setFromObject(mvMesh);
+    var center = box.getCenter(new THREE.Vector3());
+    var size = box.getSize(new THREE.Vector3());
+    mvMesh.position.sub(center);
+    mvMesh.position.y += box.min.y - center.y + 0.001;
+    mvControls = new THREE.OrbitControls(mvCamera, mvRenderer.domElement);
+    mvControls.enableDamping=true; mvControls.dampingFactor=0.08;
+    mvControls.minDistance=2; mvControls.maxDistance=20;
+    mvControls.maxPolarAngle=Math.PI/2+0.1;
+    mvControls.target.set(0,size.y/2,0);
+    applyModalMode();
+
+    // Info
+    var tv=0,tt=0;
+    mvMesh.traverse(function(c){if(c.isMesh&&c.geometry){var g=c.geometry;tv+=g.attributes.position?g.attributes.position.count:0;tt+=g.index?g.index.count/3:(g.attributes.position?g.attributes.position.count/3:0);}});
+    var infoEl = document.getElementById('mvInfo');
+    if(infoEl) infoEl.textContent = tv.toLocaleString('fr-FR') + ' sommets · ' + Math.round(tt).toLocaleString('fr-FR') + ' triangles · ' + size.x.toFixed(1)+'×'+size.y.toFixed(1)+'×'+size.z.toFixed(1);
+
+    function animate() { mvAnim = requestAnimationFrame(animate); mvControls.update(); mvRenderer.render(mvScene,mvCamera); }
+    animate();
+  }
+
+  function destroyModalViewer() {
+    if (mvAnim) cancelAnimationFrame(mvAnim);
+    if (mvControls) mvControls.dispose();
+    if (mvRenderer) mvRenderer.dispose();
+    mvRenderer=null; mvScene=null; mvCamera=null; mvControls=null; mvMesh=null; mvAnim=null;
+  }
+
+  function applyModalMode() {
+    if (!mvMesh) return;
+    mvMesh.traverse(function(c) {
+      if (!c.isMesh) return;
+      if (mvMode==='solid') c.material = new THREE.MeshStandardMaterial({color:mvColor,roughness:0.5,metalness:0.2});
+      else if (mvMode==='normal') c.material = new THREE.MeshNormalMaterial();
+      else c.material = new THREE.MeshBasicMaterial({color:'#D4963A',wireframe:true});
+    });
+  }
+
+  function setMvMode(mode) {
+    mvMode = mode;
+    var btns = document.querySelectorAll('.vmode');
+    for(var i=0;i<btns.length;i++){btns[i].classList.remove('on');btns[i].classList.add('text-gray-400');}
+    var active = document.querySelector('.vmode[data-m="'+mode+'"]');
+    if(active){active.classList.add('on');active.classList.remove('text-gray-400');}
+    document.getElementById('mvColors').style.opacity = mode==='solid'?'1':'0.3';
+    document.getElementById('mvColors').style.pointerEvents = mode==='solid'?'auto':'none';
+    applyModalMode();
+  }
+
+  function setMvColor(color) {
+    mvColor = color;
+    if(mvMode==='solid') applyModalMode();
+    document.querySelectorAll('#mvColors button').forEach(function(b){b.style.borderColor='transparent';});
+    event.currentTarget.style.borderColor='#D4963A';
+  }
+
+  function openModal(id) {
+    var p = null;
+    for(var i=0;i<PRODUCTS.length;i++){if(PRODUCTS[i].id===id){p=PRODUCTS[i];break;}}
+    if(!p) return;
+    var modal = document.getElementById('productModal');
+    var content = document.getElementById('modalContent');
+
+    content.innerHTML =
+      '<div class="grid md:grid-cols-2">' +
+        '<div class="relative aspect-square md:aspect-auto bg-[#090B0E]" style="min-height:400px">' +
+          '<canvas id="modalViewerCanvas"></canvas>' +
+          '<div id="mvDropZone" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity" style="background:rgba(11,13,16,.85)"><div class="text-center"><span class="iconify text-accent text-4xl mb-3 mx-auto block" data-icon="lucide:upload-cloud"></span><p class="font-display font-semibold">Déposez un STL</p></div></div>' +
+          '<div class="absolute top-3 left-3 flex gap-2">' +
+            '<button class="vmode on border border-white/[0.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider" data-m="solid">Solid</button>' +
+            '<button class="vmode text-gray-400 border border-white/[0.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider" data-m="normal">Normal</button>' +
+            '<button class="vmode text-gray-400 border border-white/[0.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider" data-m="wireframe">Wire</button>' +
+          '</div>' +
+          '<div id="mvColors" class="absolute top-3 right-3 flex gap-1.5">' +
+            '<button class="w-6 h-6 rounded-sm border-2 border-accent" style="background:#C0C0C0" onclick="setMvColor(\'#C0C0C0\')"></button>' +
+            '<button class="w-6 h-6 rounded-sm border-2 border-transparent hover:border-white/30" style="background:#D4963A" onclick="setMvColor(\'#D4963A\')"></button>' +
+            '<button class="w-6 h-6 rounded-sm border-2 border-transparent hover:border-white/30" style="background:#8B7355" onclick="setMvColor(\'#8B7355\')"></button>' +
+            '<button class="w-6 h-6 rounded-sm border-2 border-transparent hover:border-white/30" style="background:#4A6741" onclick="setMvColor(\'#4A6741\')"></button>' +
+            '<button class="w-6 h-6 rounded-sm border-2 border-transparent hover:border-white/30" style="background:#222" onclick="setMvColor(\'#222222\')"></button>' +
+          '</div>' +
+          '<div class="absolute bottom-0 left-0 right-0 px-3 py-2 border-t border-white/[0.08] flex items-center justify-between" style="background:rgba(11,13,16,.8);backdrop-filter:blur(8px)">' +
+            '<span id="mvInfo" class="text-[10px] text-gray-500"></span>' +
+            '<label class="text-[10px] text-gray-500 hover:text-white transition-colors cursor-pointer flex items-center gap-1"><span class="iconify text-xs" data-icon="lucide:upload"></span>Importer STL<input type="file" accept=".stl" class="hidden" onchange="loadModalSTL(this.files[0])"></label>' +
+          '</div>' +
+        '</div>' +
+        '<div class="p-8 md:p-10 flex flex-col">' +
+          (p.badge ? '<div class="inline-flex self-start bg-accent text-[#0B0D10] px-3 py-1 text-[10px] font-bold uppercase tracking-widest mb-4">'+p.badge+'</div>' : '') +
+          '<h2 class="font-display font-semibold text-2xl md:text-3xl tracking-tight leading-tight mb-3">'+p.name+'</h2>' +
+          '<div class="flex items-center gap-4 mb-6"><span class="font-display font-bold text-2xl text-accent">'+fmtPrice(p.price)+'</span>'+(p.oldPrice?'<span class="text-text-muted line-through">'+fmtPrice(p.oldPrice)+'</span>':'')+'</div>' +
+          '<div class="flex items-center gap-4 mb-6 text-sm text-text-muted"><span class="flex items-center gap-1"><span class="iconify" data-icon="lucide:box"></span>'+p.pieces+' pièces</span><span class="flex items-center gap-1"><span class="iconify" data-icon="lucide:ruler"></span>'+p.scale+'</span><span class="flex items-center gap-1"><span class="iconify" data-icon="'+(p.sup?'lucide:alert-triangle':'lucide:check-circle')+'"></span>'+(p.sup?'Support':'Sans support')+'</span></div>' +
+          '<p class="text-text-muted text-sm leading-relaxed mb-8">'+p.desc+'</p>' +
+          '<div class="border-t border-white/[0.08] pt-6 mb-8"><h4 class="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">Contenu du kit</h4><ul class="space-y-2">';
+    for(var d=0;d<p.details.length;d++){
+      content += '<li class="flex items-center gap-2 text-sm text-gray-300"><span class="iconify text-accent text-xs" data-icon="lucide:check"></span>'+p.details[d]+'</li>';
+    }
+    content += '</ul></div>' +
+          '<div class="mt-auto"><button id="modalAddBtn" class="w-full py-4 btn-accent font-display text-[11px] uppercase tracking-widest flex items-center justify-center gap-2" data-id="'+p.id+'"><span class="iconify text-base" data-icon="lucide:shopping-bag"></span>Ajouter — '+fmtPrice(p.price)+'</button><p class="text-center text-text-muted text-[10px] mt-3">Téléchargement instantané après paiement</p></div>' +
+        '</div></div>';
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+
+    // Init 3D viewer after DOM is ready
+    setTimeout(function() {
+      var canvas = document.getElementById('modalViewerCanvas');
+      if(canvas) initModalViewer(canvas, p.cat);
+
+      // Mode buttons
+      var vbtns = content.querySelectorAll('.vmode');
+      for(var v=0;v<vbtns.length;v++){
+        vbtns[v].addEventListener('click', function(){ setMvMode(this.getAttribute('data-m')); });
+      }
+
+      // Add to cart button
+      var addBtn = document.getElementById('modalAddBtn');
+      if(addBtn) addBtn.addEventListener('click', function(){ addToCart(parseInt(this.getAttribute('data-id'))); closeModal(); });
+
+      // Drag & drop STL on viewer
+      var viewerEl = canvas ? canvas.parentElement : null;
+      if(viewerEl){
+        viewerEl.addEventListener('dragover', function(e){e.preventDefault();document.getElementById('mvDropZone').style.opacity='1';});
+        viewerEl.addEventListener('dragleave', function(){document.getElementById('mvDropZone').style.opacity='0';});
+        viewerEl.addEventListener('drop', function(e){e.preventDefault();document.getElementById('mvDropZone').style.opacity='0';var f=e.dataTransfer.files[0];if(f&&f.name.toLowerCase().endsWith('.stl'))loadModalSTL(f);});
+      }
+    }, 50);
+  }
+
+  function loadModalSTL(file) {
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var geo = new THREE.STLLoader().parse(e.target.result);
+      geo.computeVertexNormals();
+      if(mvMesh) mvScene.remove(mvMesh);
+      var mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:mvColor,roughness:0.5,metalness:0.2}));
+      mesh.castShadow=true; mesh.receiveShadow=true;
+      mvMesh = new THREE.Group(); mvMesh.add(mesh); mvScene.add(mvMesh);
+      var box=new THREE.Box3().setFromObject(mvMesh);var center=box.getCenter(new THREE.Vector3());var size=box.getSize(new THREE.Vector3());
+      mvMesh.position.sub(center);mvMesh.position.y+=box.min.y-center.y+0.001;
+      mvControls.target.set(0,size.y/2,0);
+      var tv=0,tt=0;mvMesh.traverse(function(c){if(c.isMesh&&c.geometry){var g=c.geometry;tv+=g.attributes.position?g.attributes.position.count:0;tt+=g.index?g.index.count/3:(g.attributes.position?g.attributes.position.count/3:0);}});
+      var infoEl=document.getElementById('mvInfo');if(infoEl)infoEl.textContent=tv.toLocaleString('fr-FR')+' sommets · '+Math.round(tt).toLocaleString('fr-FR')+' triangles · '+size.x.toFixed(1)+'×'+size.y.toFixed(1)+'×'+size.z.toFixed(1);
+      applyModalMode();
+      toast('"'+file.name+'" chargé dans le viewer');
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function closeModal() {
+    destroyModalViewer();
+    var modal = document.getElementById('productModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+
+  // ─── SEARCH ───────────────────────────────────────────
+  function toggleSearch() {
+    var bar = document.getElementById('searchBar');
+    var hidden = bar.classList.contains('hidden');
+    bar.classList.toggle('hidden');
+    if (hidden) { document.getElementById('searchInput').focus(); }
+    else { document.getElementById('searchInput').value = ''; renderProducts(); }
+  }
+
+  // ─── MOBILE MENU ──────────────────────────────────────
+  function toggleMobile() {
+    var m = document.getElementById('mobileMenu');
+    m.classList.toggle('hidden');
+    document.body.style.overflow = m.classList.contains('hidden') ? '' : 'hidden';
+  }
+
+  // ─── CART TOGGLE ─────────────────────────────────────
+  function toggleCart() {
+    var o = document.getElementById('cartOverlay');
+    o.classList.toggle('hidden');
+    document.body.style.overflow = o.classList.contains('hidden') ? '' : 'hidden';
+  }
+
+  // ─── ORDER MODAL ─────────────────────────────────────
+  function openOrderModal() {
+    var m = document.getElementById('orderModal');
+    m.classList.remove('hidden'); m.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeOrderModal() {
+    var m = document.getElementById('orderModal');
+    m.classList.add('hidden'); m.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+
+  // ─── FAQ ──────────────────────────────────────────────
+  function renderFaq() {
+    var html = '';
+    for (var i = 0; i < FAQS.length; i++) {
+      html += '<div class="faq-item border-b border-white/[0.08]"><button class="faq-q w-full flex items-center justify-between py-6 text-left"><span class="font-display font-medium text-base pr-4">' + FAQS[i].q + '</span><span class="iconify text-xl text-gray-500 shrink-0 faq-i transition-transform" data-icon="lucide:plus"></span></button><div class="faq-a hidden pb-6"><p class="text-text-muted text-sm leading-relaxed">' + FAQS[i].a + '</p></div></div>';
+    }
+    document.getElementById('faqList').innerHTML = html;
+    var items = document.querySelectorAll('.faq-q');
+    for (var j = 0; j < items.length; j++) {
+      items[j].addEventListener('click', function() {
+        var answer = this.nextElementSibling;
+        var icon = this.querySelector('.faq-i');
+        var isOpen = !answer.classList.contains('hidden');
+        var all = document.querySelectorAll('.faq-a');
+        var allI = document.querySelectorAll('.faq-i');
+        for (var k = 0; k < all.length; k++) { all[k].classList.add('hidden'); allI[k].setAttribute('data-icon','lucide:plus'); allI[k].style.transform=''; }
+        if (!isOpen) { answer.classList.remove('hidden'); icon.setAttribute('data-icon','lucide:minus'); icon.style.transform='rotate(180deg)'; }
+      });
+    }
+  }
+
+  // ─── NEWSLETTER ──────────────────────────────────────
+  function subscribe() {
+    var email = document.getElementById('nlEmail').value;
+    var msg = document.getElementById('nlMsg');
+    if (!email || email.indexOf('@') === -1) {
+      msg.textContent = 'Veuillez entrer une adresse email valide.';
+      msg.className = 'text-xs text-accent mt-3'; msg.classList.remove('hidden'); return;
+    }
+    msg.textContent = '✓ Inscription confirmée !';
+    msg.className = 'text-xs text-green-400 mt-3'; msg.classList.remove('hidden');
+    document.getElementById('nlEmail').value = '';
+    toast('Inscription confirmée');
+  }
+
+  // ─── STRIPE CHECKOUT (dynamic load) ─────────────────
+  async function startCheckout() {
+    var email = document.getElementById('checkoutEmail').value.trim();
+    var errEl = document.getElementById('emailErr');
+    var btn = document.getElementById('checkoutBtn');
+    if (!email || email.indexOf('@')===-1) { errEl.classList.remove('hidden'); return; }
+    errEl.classList.add('hidden');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Chargement...';
+    try {
+      if (!window.Stripe) await loadScript('https://js.stripe.com/v3/');
+      var stripe = window.Stripe(CONFIG.STRIPE_PK);
+      // En production, appeler ton Edge Function ici
+      toast('Stripe configuré — mode démo');
+      console.info('Checkout payload:', { email: email, items: cart });
+    } catch(e) {
+      toast('Erreur : ' + e.message);
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<span class="iconify text-base" data-icon="lucide:lock"></span> Payer avec Stripe';
+  }
+
+  // ─── SHOWCASE 3D (homepage) ─────────────────────────
+  var scRenderer, scScene, scCamera, scControls, scAnim;
+  function initShowcase() {
+    var canvas = document.getElementById('showcaseCanvas');
+    var container = canvas.parentElement;
+    scScene = new THREE.Scene();
+    scScene.background = new THREE.Color('#090B0E');
+    scCamera = new THREE.PerspectiveCamera(45, container.clientWidth/Math.max(container.clientHeight,1), 0.1, 1000);
+    scCamera.position.set(8,6,8);
+    scRenderer = new THREE.WebGLRenderer({canvas:canvas,antialias:true});
+    scRenderer.setSize(container.clientWidth,container.clientHeight);
+    scRenderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    scRenderer.shadowMap.enabled=true;
+    scRenderer.toneMapping=THREE.ACESFilmicToneMapping;
+    scRenderer.toneMappingExposure=1.1;
+    scScene.add(new THREE.AmbientLight('#ffffff',0.4));
+    var dl=new THREE.DirectionalLight('#FFF5E6',0.9);dl.position.set(8,12,6);dl.castShadow=true;dl.shadow.mapSize.set(512,512);dl.shadow.camera.near=0.5;dl.shadow.camera.far=30;dl.shadow.camera.left=-8;dl.shadow.camera.right=8;dl.shadow.camera.top=8;dl.shadow.camera.bottom=-8;scScene.add(dl);
+    var fl=new THREE.DirectionalLight('#D4963A',0.2);fl.position.set(-5,3,-5);scScene.add(fl);
+    scScene.add(new THREE.GridHelper(16,16,'#1a1d22','#14161a'));
+    var gnd=new THREE.Mesh(new THREE.PlaneGeometry(16,16),new THREE.ShadowMaterial({opacity:0.3}));gnd.rotation.x=-Math.PI/2;gnd.position.y=-0.01;gnd.receiveShadow=true;scScene.add(gnd);
+    var m=new THREE.MeshStandardMaterial({color:'#C0C0C0',roughness:0.5,metalness:0.2});
+    function bx(w,h,d,x,y,z,mt){var b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mt||m);b.position.set(x,y,z);b.castShadow=true;b.receiveShadow=true;scScene.add(b);}
+    bx(4,2.5,3.5,0,1.25,0);bx(4.4,0.2,3.9,0,2.6,0);bx(0.3,2.5,0.6,-2.2,1.25,0);bx(0.3,2.5,0.6,2.2,1.25,0);
+    bx(0.6,0.8,0.6,-1,0.4,2.5,new THREE.MeshStandardMaterial({color:'#8B7355',roughness:0.7}));
+    scControls=new THREE.OrbitControls(scCamera,scRenderer.domElement);scControls.enableDamping=true;scControls.dampingFactor=0.08;scControls.autoRotate=true;scControls.autoRotateSpeed=1.5;scControls.minDistance=4;scControls.maxDistance=18;scControls.maxPolarAngle=Math.PI/2+0.1;scControls.target.set(0,1,0);
+    new ResizeObserver(function(){var w=container.clientWidth,h=container.clientHeight;scCamera.aspect=w/Math.max(h,1);scCamera.updateProjectionMatrix();scRenderer.setSize(w,h);}).observe(container);
+    function animate(){scAnim=requestAnimationFrame(animate);scControls.update();scRenderer.render(scScene,scCamera);}
+    animate();
+  }
+
+  // ─── EVENT LISTENERS (all via addEventListener) ──────
+  document.getElementById('searchBtn').addEventListener('click', toggleSearch);
+  document.getElementById('searchClose').addEventListener('click', toggleSearch);
+  document.getElementById('searchInput').addEventListener('input', renderProducts);
+  document.getElementById('cartBtn').addEventListener('click', toggleCart);
+  document.getElementById('cartClose').addEventListener('click', toggleCart);
+  document.getElementById('cartBg').addEventListener('click', toggleCart);
+  document.getElementById('checkoutBtn').addEventListener('click', startCheckout);
+  document.getElementById('menuBtn').addEventListener('click', toggleMobile);
+  document.getElementById('menuClose').addEventListener('click', toggleMobile);
+  document.querySelectorAll('.mob-link').forEach(function(a){ a.addEventListener('click', toggleMobile); });
+  document.getElementById('productModalClose').addEventListener('click', closeModal);
+  document.getElementById('productModalBg').addEventListener('click', closeModal);
+  document.getElementById('sortSelect').addEventListener('change', renderProducts);
+  document.getElementById('nlBtn').addEventListener('click', subscribe);
+  document.getElementById('addPackBtn').addEventListener('click', function() {
+    var found = false;
+    for(var i=0;i<cart.length;i++){if(cart[i].id===999){cart[i].qty++;found=true;break;}}
+    if(!found) cart.push({id:999,name:'Starter Kit Wargame Ultimate',price:49.90,img:'3dwp-starter',qty:1});
+    updateCart(); toast('Starter Kit ajouté');
+  });
+  document.getElementById('resetFilters').addEventListener('click', function(){ currentCat='all'; document.getElementById('searchInput').value=''; renderCats(); renderProducts(); });
+  // Order modal
+  document.querySelector('a[href="#orders"]') || null;
+  var orderLinks = document.querySelectorAll('a');
+  for(var i=0;i<orderLinks.length;i++){if(orderLinks[i].getAttribute('href')==='"){/*skip*/} if(orderLinks[i].textContent.indexOf('commandes')!==-1){orderLinks[i].addEventListener('click',function(e){e.preventDefault();openOrderModal();});}}
+  document.getElementById('orderModalClose').addEventListener('click', closeOrderModal);
+  document.getElementById('orderModalBg').addEventListener('click', closeOrderModal);
+  document.getElementById('orderLookupBtn').addEventListener('click', function(){
+    var results = document.getElementById('orderResults');
+    results.innerHTML = '<p class="text-text-muted text-sm text-center py-4">Supabase non configuré — mode démo</p>';
+  });
+
+  // ESC key
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    closeModal(); closeOrderModal();
+    var cart = document.getElementById('cartOverlay');
+    if (!cart.classList.contains('hidden')) toggleCart();
+    var search = document.getElementById('searchBar');
+    if (!search.classList.contains('hidden')) toggleSearch();
+    var menu = document.getElementById('mobileMenu');
+    if (!menu.classList.contains('hidden')) toggleMobile();
+  });
+
+  // ─── INIT ────────────────────────────────────────────
+  renderCats();
+  renderProducts();
+  updateCart();
+  renderFaq();
+  window.addEventListener('load', initShowcase);
+
+  </script>
+</body>
+</html>
